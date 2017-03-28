@@ -63,10 +63,28 @@ export default class TodoApp implements OnInit {
     this.apollo.mutate({
       mutation: gql`
         mutation addTodo($text: String!) {
-          createTodo(complete: false, text: $text) { id }
+          createTodo(complete: false, text: $text) { id text complete }
         }
       `,
       variables: { text },
+      optimisticResponse: {
+        __typename: 'Mutation',
+        createTodo: {
+          __typename: 'Todo',
+          id: 'random',
+          text: text,
+          complete: false
+        }
+      },
+      updateQueries: {
+        Todos: (prev, { mutationResult }) => {
+          if (!mutationResult['data']) { return prev; }
+          const newTodo = mutationResult['data'].createTodo;
+
+          prev['allTodoes'] = [...prev['allTodoes'], newTodo];
+          return prev;
+        }
+      }
     }).toPromise();
   }
 
@@ -74,7 +92,7 @@ export default class TodoApp implements OnInit {
     this.apollo.mutate({
       mutation: gql`
         mutation renameTodo($id: ID!, $text: String!) {
-          updateTodo(id: $id, text: $text) { id }
+          updateTodo(id: $id, text: $text) { id text }
         }
       `,
       variables: {
@@ -95,6 +113,28 @@ export default class TodoApp implements OnInit {
         id: todo.id,
         complete,
       },
+      optimisticResponse: {
+        __typename: 'Mutation',
+        updateTodo: {
+          __typename: 'Todo',
+          id: todo.id,
+          complete: complete
+        }
+      },
+      updateQueries: {
+        Todos: (prev, { mutationResult }) => {
+          if (!mutationResult['data']) {
+            return;
+          } else {
+            prev['allTodoes'].forEach((todo, i) => {
+              if (todo.id === mutationResult['data'].updateTodo.id) {
+                prev['allTodoes'][i].complete = complete;
+              }
+            });
+            return prev;
+          }
+        },
+      }
     }).toPromise();
   }
 
@@ -108,6 +148,27 @@ export default class TodoApp implements OnInit {
       variables: {
         id: todo.id,
       },
+      optimisticResponse: {
+        __typename: 'Mutation',
+        deleteTodo: {
+          __typename: 'Todo',
+          id: todo.id
+        }
+      },
+      updateQueries: {
+        Todos: (prev, { mutationResult }) => {
+          if (!mutationResult['data']) {
+            return;
+          } else {
+            prev['allTodoes'] = prev['allTodoes'].filter(todo => {
+              if (todo.id !== mutationResult['data'].deleteTodo.id) {
+                return todo;
+              }
+            })
+            return prev;
+          }
+        },
+      }
     }).toPromise();
   }
 }
