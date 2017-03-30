@@ -63,7 +63,11 @@ export default class TodoApp implements OnInit {
     this.apollo.mutate({
       mutation: gql`
         mutation addTodo($text: String!) {
-          createTodo(complete: false, text: $text) { id text complete }
+          createTodo(complete: false, text: $text) {
+            id
+            text
+            complete
+          }
         }
       `,
       variables: { text },
@@ -78,9 +82,11 @@ export default class TodoApp implements OnInit {
       },
       updateQueries: {
         Todos: (prev, { mutationResult }) => {
-          if (!mutationResult['data']) { return prev; }
-          const newTodo = mutationResult['data'].createTodo;
+          if (!mutationResult['data']) {
+            return prev;
+          }
 
+          const newTodo = mutationResult['data'].createTodo;
           prev['allTodoes'] = [...prev['allTodoes'], newTodo];
           return prev;
         }
@@ -92,7 +98,10 @@ export default class TodoApp implements OnInit {
     this.apollo.mutate({
       mutation: gql`
         mutation renameTodo($id: ID!, $text: String!) {
-          updateTodo(id: $id, text: $text) { id text }
+          updateTodo(id: $id, text: $text) {
+            id
+            text
+          }
         }
       `,
       variables: {
@@ -106,7 +115,9 @@ export default class TodoApp implements OnInit {
     this.apollo.mutate({
       mutation: gql`
         mutation toggleTodo($id: ID!, $complete: Boolean!) {
-          updateTodo(id: $id, complete: $complete) { id }
+          updateTodo(id: $id, complete: $complete) {
+            id
+          }
         }
       `,
       variables: {
@@ -124,15 +135,15 @@ export default class TodoApp implements OnInit {
       updateQueries: {
         Todos: (prev, { mutationResult }) => {
           if (!mutationResult['data']) {
-            return;
-          } else {
-            prev['allTodoes'].forEach((todo, i) => {
-              if (todo.id === mutationResult['data'].updateTodo.id) {
-                prev['allTodoes'][i].complete = complete;
-              }
-            });
             return prev;
           }
+
+          prev['allTodoes'].forEach((todo, i) => {
+            if (todo.id === mutationResult['data'].updateTodo.id) {
+              prev['allTodoes'][i].complete = complete;
+            }
+          });
+          return prev;
         },
       }
     }).toPromise();
@@ -142,7 +153,9 @@ export default class TodoApp implements OnInit {
     this.apollo.mutate({
       mutation: gql`
         mutation deleteTodo($id: ID!) {
-          deleteTodo(id: $id) { id }
+          deleteTodo(id: $id) {
+            id
+          }
         }
       `,
       variables: {
@@ -158,15 +171,15 @@ export default class TodoApp implements OnInit {
       updateQueries: {
         Todos: (prev, { mutationResult }) => {
           if (!mutationResult['data']) {
-            return;
-          } else {
-            prev['allTodoes'] = prev['allTodoes'].filter(todo => {
-              if (todo.id !== mutationResult['data'].deleteTodo.id) {
-                return todo;
-              }
-            })
-            return prev;
+            return prev
           }
+
+          prev['allTodoes'] = prev['allTodoes'].filter(todo => {
+            if (todo.id !== mutationResult['data'].deleteTodo.id) {
+              return todo;
+            }
+          })
+          return prev;
         },
       }
     }).toPromise();
